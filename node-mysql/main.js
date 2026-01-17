@@ -34,29 +34,60 @@ var app = http.createServer(function (request, response) {
         response.end(html);
       });
     } else {
-      fs.readdir("./data", function (error, filelist) {
-        var filteredId = path.parse(queryData.id).base;
-        fs.readFile(`data/${filteredId}`, "utf8", function (err, description) {
-          var title = queryData.id;
-          var sanitizedTitle = sanitizeHtml(title);
-          var sanitizedDescription = sanitizeHtml(description, {
-            allowedTags: ["h1"],
-          });
-          var list = template.list(filelist);
-          var html = template.HTML(
-            sanitizedTitle,
-            list,
-            `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
-            ` <a href="/create">create</a>
-                <a href="/update?id=${sanitizedTitle}">update</a>
-                <form action="delete_process" method="post">
-                  <input type="hidden" name="id" value="${sanitizedTitle}">
-                  <input type="submit" value="delete">
-                </form>`
-          );
-          response.writeHead(200);
-          response.end(html);
-        });
+      // fs.readdir("./data", function (error, filelist) {
+      //   var filteredId = path.parse(queryData.id).base;
+      //   fs.readFile(`data/${filteredId}`, "utf8", function (err, description) {
+      //     var title = queryData.id;
+      //     var sanitizedTitle = sanitizeHtml(title);
+      //     var sanitizedDescription = sanitizeHtml(description, {
+      //       allowedTags: ["h1"],
+      //     });
+      //     var list = template.list(filelist);
+      //     var html = template.HTML(
+      //       sanitizedTitle,
+      //       list,
+      //       `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
+      //       ` <a href="/create">create</a>
+      //           <a href="/update?id=${sanitizedTitle}">update</a>
+      //           <form action="delete_process" method="post">
+      //             <input type="hidden" name="id" value="${sanitizedTitle}">
+      //             <input type="submit" value="delete">
+      //           </form>`
+      //     );
+      //     response.writeHead(200);
+      //     response.end(html);
+      //   });
+      // });
+      db.query(`SELECT * FROM topic`, function (err, topics) {
+        if (err) {
+          throw err;
+        }
+        db.query(
+          `SELECT * FROM topic WHERE id = ?`,
+          [queryData.id],
+          function (err, topic) {
+            if (err) {
+              throw err;
+            }
+            console.log(topic[0].title);
+            var title = topic[0].title;
+            var description = topic[0].description;
+            var list = template.list(topics);
+            var html = template.HTML(
+              title,
+              list,
+              `<h2>${title}</h2>${description}`,
+              `<a href="/create">create</a>
+                 <a href="/update?id=${queryData.id}">update</a>
+                 <form action="delete_process" method="post">
+                   <input type="hidden" name="id" value="${queryData.id}">
+                   <input type="submit" value="delete">
+                 </form>`
+            );
+            response.writeHead(200);
+            response.end(html);
+          }
+        );
       });
     }
   } else if (pathname === "/create") {
