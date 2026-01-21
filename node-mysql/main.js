@@ -24,12 +24,7 @@ var app = http.createServer(function (request, response) {
         var title = "Welcome";
         var description = "Hello, Node.js";
         var list = template.list(topics);
-        var html = template.HTML(
-          title,
-          list,
-          `<h2>${title}</h2>${description}`,
-          `<a href="/create">create</a>`,
-        );
+        var html = template.HTML(title, list, `<h2>${title}</h2>${description}`, `<a href="/create">create</a>`);
         response.writeHead(200);
         response.end(html);
       });
@@ -39,23 +34,26 @@ var app = http.createServer(function (request, response) {
           throw err;
         }
         db.query(
-          `SELECT * FROM topic WHERE id = ?`,
+          `SELECT * FROM topic LEFT JOIN author ON topic.author_id=author.id WHERE topic.id = ?`,
           [queryData.id],
           function (err, topic) {
             if (err) {
               throw err;
             }
-            console.log(topic[0].title);
+            console.log(topic);
             var title = topic[0].title;
             var description = topic[0].description;
             var list = template.list(topics);
             var html = template.HTML(
               title,
               list,
-              `<h2>${title}</h2>${description}`,
+              `<h2>${title}</h2>
+              ${description}
+              <p>by ${topic[0].name}</p>
+              `,
               `<a href="/create">create</a>
-                 <a href="/update?id=${queryData.id}">update</a>
-                 <form action="delete_process" method="post">
+             <a href="/update?id=${queryData.id}">update</a>
+                   <form action="delete_process" method="post">
                    <input type="hidden" name="id" value="${queryData.id}">
                    <input type="submit" value="delete">
                  </form>`,
@@ -103,7 +101,7 @@ var app = http.createServer(function (request, response) {
           if (err) {
             throw err;
           }
-          response.writeHead(302, { Location: `/?id=${result.insertId}` });
+          response.writeHead(302, {Location: `/?id=${result.insertId}`});
           response.end();
         },
       );
@@ -113,18 +111,15 @@ var app = http.createServer(function (request, response) {
       if (err) {
         throw err;
       }
-      db.query(
-        `SELECT * FROM topic WHERE id = ?`,
-        [queryData.id],
-        function (err, topic) {
-          if (err) {
-            throw err;
-          }
-          var list = template.list(topics);
-          var html = template.HTML(
-            topic[0].title,
-            list,
-            `
+      db.query(`SELECT * FROM topic WHERE id = ?`, [queryData.id], function (err, topic) {
+        if (err) {
+          throw err;
+        }
+        var list = template.list(topics);
+        var html = template.HTML(
+          topic[0].title,
+          list,
+          `
               <form action="/update_process" method="post">
                 <input type="hidden" name="id" value="${topic[0].id}">
                 <p><input type="text" name="title" placeholder="title" value="${topic[0].title}"></p>
@@ -136,12 +131,11 @@ var app = http.createServer(function (request, response) {
                 </p>
               </form>
               `,
-            `<a href="/create">create</a> <a href="/update?id=${topic[0].id}">update</a>`,
-          );
-          response.writeHead(200);
-          response.end(html);
-        },
-      );
+          `<a href="/create">create</a> <a href="/update?id=${topic[0].id}">update</a>`,
+        );
+        response.writeHead(200);
+        response.end(html);
+      });
     });
   } else if (pathname === "/update_process") {
     var body = "";
@@ -161,7 +155,7 @@ var app = http.createServer(function (request, response) {
           if (err) {
             throw err;
           }
-          response.writeHead(302, { Location: `/?id=${post.id}` });
+          response.writeHead(302, {Location: `/?id=${post.id}`});
           response.end();
         },
       );
@@ -173,17 +167,13 @@ var app = http.createServer(function (request, response) {
     });
     request.on("end", function () {
       var post = qs.parse(body);
-      db.query(
-        `DELETE FROM topic WHERE id = ?`,
-        [post.id],
-        function (err, result) {
-          if (err) {
-            throw err;
-          }
-          response.writeHead(302, { Location: `/` });
-          response.end();
-        },
-      );
+      db.query(`DELETE FROM topic WHERE id = ?`, [post.id], function (err, result) {
+        if (err) {
+          throw err;
+        }
+        response.writeHead(302, {Location: `/`});
+        response.end();
+      });
     });
   } else {
     response.writeHead(404);
