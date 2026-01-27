@@ -81,7 +81,7 @@ exports.update = function (request, response) {
           </style>
           <form action="/author/update_process" method="post">
             <p>
-              <input type="hidden" name="id" values=${queryData.id} />
+              <input type="hidden" name="id" value=${queryData.id} />
             </p>
             <p>
               <input type="text" name="name" value="${author[0].name}" placeholder="name">
@@ -100,5 +100,26 @@ exports.update = function (request, response) {
         response.end(html);
       });
     });
+  });
+};
+
+exports.update_process = function (request, response) {
+  var body = "";
+  request.on("data", function (data) {
+    body = body + data;
+  });
+  request.on("end", function () {
+    var post = qs.parse(body);
+    db.query(
+      `UPDATE author SET name = ?, profile = ? WHERE id = ?`,
+      [post.name, post.profile, post.id],
+      function (err, result) {
+        if (err) {
+          throw err;
+        }
+        response.writeHead(302, {Location: `/author`});
+        response.end();
+      },
+    );
   });
 };
