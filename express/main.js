@@ -2,6 +2,8 @@ const express = require("express");
 const app = express();
 const fs = require("fs");
 const template = require("./lib/template");
+const sanitizeHtml = require("sanitize-html");
+const path = require("path");
 
 app.get("/", (req, res) =>
   fs.readdir("./data", (err, filelist) => {
@@ -12,6 +14,33 @@ app.get("/", (req, res) =>
     res.send(html);
   }),
 );
+
+app.get("/page/:pageId", (req, res) => {
+  fs.readdir("./data", function (error, fileList) {
+    const filteredId = path.parse(req.params.pageId).base;
+    fs.readFile(`data/${filteredId}`, "utf8", (error, description) => {
+      const title = req.params.pageId;
+      const sanitizedTitle = sanitizeHtml(title);
+      const sanitizedDescription = sanitizeHtml(description, {
+        allowedTags: ["h1"],
+      });
+      const list = template.list(fileList);
+      const html = template.HTML(
+        sanitizedTitle,
+        list,
+        `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
+        `<a href="/create">create</a>`,
+        ` <a href="/create">create</a>
+          <a href="/update?id=${sanitizedTitle}">update</a>
+          <form action="delete_process" method="post">
+            <input type="hidden" name="id" value="${sanitizedTitle}">
+            <input type="submit" value="delete">
+          </form>`,
+      );
+      res.send(html);
+    });
+  });
+});
 
 app.listen(3000, () => console.log("Example app listening on port 3000!"));
 
