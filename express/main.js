@@ -13,6 +13,9 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(compression());
 app.use((req, res, next) => {
   fs.readdir("./data", (err, fileList) => {
+    if (err) {
+      return next(err);
+    }
     req.list = fileList;
     next();
   });
@@ -31,13 +34,15 @@ app.get("/", (req, res) => {
   res.send(html);
 });
 
-app.get("/page/:pageId", (req, res) => {
+app.get("/page/:pageId", (req, res, next) => {
   const filteredId = path.parse(req.params.pageId).base;
   fs.readFile(`data/${filteredId}`, "utf8", (error, description) => {
     if (error) {
-      return res.redirect("/");
+      if (error.code === "ENOENT") {
+        return res.status(404).send("404 Not Found");
+      }
+      return next(error);
     }
-
     const title = req.params.pageId;
     const sanitizedTitle = sanitizeHtml(title);
     const sanitizedDescription = sanitizeHtml(description, {
@@ -49,11 +54,11 @@ app.get("/page/:pageId", (req, res) => {
       list,
       `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
       ` <a href="/create">create</a>
-          <a href="/update/${sanitizedTitle}">update</a>
-          <form action="/delete_process" method="post">
-            <input type="hidden" name="id" value="${sanitizedTitle}">
-            <input type="submit" value="delete">
-          </form>`,
+            <a href="/update/${sanitizedTitle}">update</a>
+            <form action="/delete_process" method="post">
+              <input type="hidden" name="id" value="${sanitizedTitle}">
+              <input type="submit" value="delete">
+            </form>`,
     );
     res.send(html);
   });
@@ -135,6 +140,15 @@ app.post("/delete_process", (req, res) => {
   fs.unlink(`data/${filteredId}`, function (error) {
     res.redirect("/");
   });
+});
+
+app.use((req, res, next) => {
+  res.status(404).send("404 Not Found");
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("500 Error");
 });
 
 app.listen(3000, () => console.log("Example app listening on port 3000!"));
